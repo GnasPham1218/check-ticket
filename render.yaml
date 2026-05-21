@@ -10,9 +10,15 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 22.15.0
-      - key: STORAGE_DRIVER
-        value: sqlite
-      - key: XOSO_API_KEY
-        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
       - key: VITE_GOOGLE_CLIENT_ID
+        sync: false
+      - key: STORAGE_DRIVER
+        value: tidb
+      - key: TIDB_SSL
+        value: "true"
+      - key: DATABASE_URL
         sync: false
