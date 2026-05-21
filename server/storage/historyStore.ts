@@ -1,4 +1,3 @@
-import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,6 +17,7 @@ let tidbPoolPromise: Promise<any> | null = null;
 let tidbSchemaPromise: Promise<void> | null = null;
 
 if (!useTidb) {
+  const { default: Database } = await import('better-sqlite3');
   const dataDir = path.join(dirname, '..', 'data');
   const databasePath = process.env.SQLITE_PATH || path.join(dataDir, 'check-ticket.sqlite');
 
