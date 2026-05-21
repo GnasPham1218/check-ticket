@@ -1,6 +1,6 @@
 import React from "react";
 import type { Stats } from "../../types/domain";
-import { compactMoney, formatMoney } from "../../utils/format";
+import { formatCompactVnd } from "../../utils/format";
 
 interface StatsLineChartProps {
   stats: Stats | null;
@@ -67,16 +67,16 @@ export const StatsLineChart: React.FC<StatsLineChartProps> = ({
           <h3 className="text-xl font-black">Số tiền kiếm được theo ngày</h3>
         </div>
         <div className="grid gap-2 sm:grid-cols-3">
-          <ChartBadge label="Hiện tại" positive={latest >= 0} value={formatMoney(latest)} />
+          <ChartBadge label="Hiện tại" positive={latest >= 0} value={formatCompactVnd(latest, { signed: true })} />
           <ChartBadge
             label="Cao nhất"
             positive={(best?.cumulativeProfit || 0) >= 0}
-            value={formatMoney(best?.cumulativeProfit || 0)}
+            value={formatCompactVnd(best?.cumulativeProfit || 0, { signed: true })}
           />
           <ChartBadge
             label="Thấp nhất"
             positive={(worst?.cumulativeProfit || 0) >= 0}
-            value={formatMoney(worst?.cumulativeProfit || 0)}
+            value={formatCompactVnd(worst?.cumulativeProfit || 0, { signed: true })}
           />
         </div>
       </div>
@@ -156,7 +156,7 @@ export const StatsLineChart: React.FC<StatsLineChartProps> = ({
                         x={point.x}
                         y={point.y - 20}
                       >
-                        {compactMoney(point.cumulativeProfit || 0)}
+                        {formatCompactVnd(point.cumulativeProfit || 0, { signed: true })}
                       </text>
                     </g>
                   ) : null}
@@ -179,13 +179,13 @@ export const StatsLineChart: React.FC<StatsLineChartProps> = ({
             <ChartSummary label="Tháng" value={selectedMonth} />
             <ChartSummary
               label="Tổng tiền mua"
-              value={formatMoney(
+              value={formatCompactVnd(
                 points.reduce((sum, item) => sum + (item.totalSpent || 0), 0),
               )}
             />
             <ChartSummary
               label="Tổng tiền trúng"
-              value={formatMoney(
+              value={formatCompactVnd(
                 points.reduce((sum, item) => sum + (item.totalWon || 0), 0),
               )}
             />

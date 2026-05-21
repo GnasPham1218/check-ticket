@@ -18,6 +18,8 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({
     { to: "/account", label: "Tài khoản" },
   ];
 
+  const themeLabel = isDark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối";
+
   return (
     <header className="mb-6 flex items-center justify-between gap-4">
       <div className="flex items-center gap-3">
@@ -55,15 +57,59 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({
           </div>
         ) : null}
         <button
-          className="rounded-2xl border border-ink-200 bg-white/85 px-4 py-2 text-sm font-black text-ink-700 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-400 dark:border-white/10 dark:bg-white/10 dark:text-white"
+          aria-label={themeLabel}
+          className="grid h-11 w-11 place-items-center rounded-2xl border border-ink-200 bg-white/85 text-ink-700 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-400 dark:border-white/10 dark:bg-white/10 dark:text-white"
           onClick={onToggleTheme}
+          title={themeLabel}
           type="button"
         >
-          {isDark ? "Sáng" : "Tối"}
+          {isDark ? <SunIcon /> : <MoonIcon />}
         </button>
       </div>
     </header>
   );
 };
+
+function SunIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2" />
+      <path d="M12 20v2" />
+      <path d="m4.93 4.93 1.41 1.41" />
+      <path d="m17.66 17.66 1.41 1.41" />
+      <path d="M2 12h2" />
+      <path d="M20 12h2" />
+      <path d="m6.34 17.66-1.41 1.41" />
+      <path d="m19.07 4.93-1.41 1.41" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M20.99 13.46A8.5 8.5 0 1 1 10.54 3.01 6.5 6.5 0 1 0 20.99 13.46Z" />
+    </svg>
+  );
+}
 
 export default AppNavbar;

@@ -39,13 +39,16 @@ import {
 } from "./services/apiClient";
 import type { AppUser, DrawResult, Prize, Ticket, TicketCheckResult, Stats } from "./types/domain";
 import { fileToDataUrl } from "./utils/file";
-import { formatDate, formatMoney } from "./utils/format";
+import { formatCompactVnd, formatDate, formatMoney } from "./utils/format";
 import StatsLineChart from "./features/account/StatsLineChart";
 import AppNavbar from "./layout/AppNavbar";
 import BottomNav from "./layout/BottomNav";
 import HistoryList from "./features/account/HistoryList";
 import TodayResultsPanel from "./features/check/TodayResultsPanel";
 import BatchTicketRow from "./features/check/BatchTicketRow";
+import DonationPanel from "./features/home/DonationPanel";
+import ExperienceCard from "./features/home/ExperienceCard";
+import HomeHero from "./features/home/HomeHero";
 // --- CONSTANTS & TYPES ---
 const emptyTicket: Ticket = {
   province: "",
@@ -646,6 +649,18 @@ function LotteryApp() {
 
 // --- SUB PAGES SYSTEM ---
 function HomePage() {
+  return (
+    <div className="space-y-8 py-10">
+      <section className="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+        <HomeHero />
+        <ExperienceCard />
+      </section>
+      <DonationPanel />
+    </div>
+  );
+}
+
+function LegacyHomePage() {
   const navigate = useNavigate();
   return (
     <section className="grid items-center gap-8 py-10 lg:grid-cols-[1.05fr_0.95fr]">
@@ -704,15 +719,15 @@ function HomePage() {
             Trải nghiệm mới
           </p>
           <h2 className="mt-3 text-3xl font-black">
-            Một app cho dò vé lẻ, dò nhiều vé và thống kê chi phí.
+            Dò vé nhanh, lưu lịch sử và xem lời lỗ trong một nơi.
           </h2>
         </div>
         <div className="mt-5 grid gap-3">
           {[
-            "Hỗ trợ nhập API key AI riêng",
-            "Có chế độ sáng/tối",
-            "Lưu SQLite trên máy local",
-            "Dùng tốt trên điện thoại",
+            "Tự nhập API key AI, app không lưu key",
+            "Dò một vé hoặc nhiều vé cùng lúc",
+            "Lưu lịch sử bằng TiDB để dùng lại sau",
+            "Tối ưu cho điện thoại khi cần chụp vé",
           ].map((item) => (
             <div
               key={item}
@@ -722,8 +737,55 @@ function HomePage() {
             </div>
           ))}
         </div>
+        <div className="mt-5 rounded-3xl border border-ink-200 bg-white/80 p-5 dark:border-white/10 dark:bg-white/10">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-brand-700 dark:text-brand-300">
+            Buy me a coffee
+          </p>
+          <h3 className="mt-2 text-2xl font-black text-ink-950 dark:text-white">
+            Ủng hộ app duy trì server
+          </h3>
+          <p className="mt-2 text-sm font-bold text-ink-500 dark:text-ink-300">
+            Quét Vietcombank hoặc MoMo nếu app giúp bạn dò vé nhanh hơn.
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <DonateQrCard
+              alt="QR Vietcombank"
+              label="Vietcombank"
+              src="/donate/vietcombank-qr.png"
+            />
+            <DonateQrCard
+              alt="QR MoMo"
+              label="MoMo"
+              src="/donate/momo-qr.png"
+            />
+          </div>
+        </div>
       </div>
     </section>
+  );
+}
+
+function DonateQrCard({ alt, label, src }: { alt: string; label: string; src: string }) {
+  const [missing, setMissing] = useState(false);
+
+  return (
+    <div className="rounded-2xl border border-ink-200 bg-ink-50 p-4 text-center dark:border-white/10 dark:bg-white/5">
+      <div className="mx-auto flex aspect-square max-w-[180px] items-center justify-center overflow-hidden rounded-2xl bg-white p-3">
+        {missing ? (
+          <div className="px-3 text-sm font-black text-ink-400">
+            Thêm ảnh QR vào {src}
+          </div>
+        ) : (
+          <img
+            alt={alt}
+            className="h-full w-full object-contain"
+            src={src}
+            onError={() => setMissing(true)}
+          />
+        )}
+      </div>
+      <p className="mt-3 font-black text-ink-800 dark:text-white">{label}</p>
+    </div>
   );
 }
 
@@ -1379,12 +1441,12 @@ function AccountPage({
           />
           <StatCard
             label="Tiền mua tháng này"
-            value={formatMoney(stats?.month?.totalSpent || 0)}
+            value={formatCompactVnd(stats?.month?.totalSpent || 0)}
             tone="amber"
           />
           <StatCard
             label="Tiền trúng tháng này"
-            value={formatMoney(stats?.month?.totalWon || 0)}
+            value={formatCompactVnd(stats?.month?.totalWon || 0)}
             tone="green"
           />
           <StatCard
@@ -1394,7 +1456,7 @@ function AccountPage({
           />
           <StatCard
             label="Tổng lãi/lỗ"
-            value={formatMoney(totalProfit)}
+            value={formatCompactVnd(totalProfit)}
             tone={totalProfit >= 0 ? "green" : "red"}
           />
         </div>

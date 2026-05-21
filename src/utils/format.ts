@@ -12,6 +12,21 @@ export function formatMoney(value: number): string {
   }).format(Number(value) || 0);
 }
 
+export function formatCompactVnd(value: number, options: { signed?: boolean } = {}): string {
+  const num = Number(value) || 0;
+  const abs = Math.abs(num);
+  const sign = options.signed && num > 0 ? '+' : num < 0 ? '-' : '';
+  const formatDecimal = (amount: number) =>
+    new Intl.NumberFormat('vi-VN', {
+      maximumFractionDigits: amount >= 10 ? 0 : 1,
+    }).format(amount);
+
+  if (abs >= 1e9) return `${sign}${formatDecimal(abs / 1e9)} tỷ`;
+  if (abs >= 1e6) return `${sign}${formatDecimal(abs / 1e6)} triệu`;
+  if (abs >= 1e3) return `${sign}${formatDecimal(abs / 1e3)} nghìn`;
+  return `${sign}${new Intl.NumberFormat('vi-VN').format(abs)} đ`;
+}
+
 export function compactMoney(value: number): string {
   const num = Number(value) || 0;
   const abs = Math.abs(num);
@@ -26,4 +41,3 @@ export function compactMoney(value: number): string {
   }
   return `${sign}${abs} ₫`;
 }
-
