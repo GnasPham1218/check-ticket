@@ -1,0 +1,31 @@
+{
+  "apis": [
+    {
+      "province": "*",
+      "provider": "minhngoc"
+    },
+    {
+      "province": "Quảng Ngãi",
+      "aliases": ["QUẢNG NGÃI", "Quang Ngai"],
+      "requiredEnv": "XOSO_API_KEY",
+      "url": "https://xosoapi.online/api/v1/vietnam/draws?province={provinceSlug}&date={date}",
+      "headers": {
+        "X-API-Key": "{env:XOSO_API_KEY}"
+      },
+      "dataPath": "data",
+      "prizePath": "prizes"
+    },
+    {
+      "province": "Đồng Nai",
+      "aliases": ["Dong Nai"],
+      "shape": "sample",
+      "url": "http://localhost:4000/sample-data/{date}/dong-nai.json"
+    },
+    {
+      "province": "Quảng Ngãi",
+      "aliases": ["QUẢNG NGÃI", "Quang Ngai"],
+      "shape": "sample",
+      "url": "http://localhost:4000/sample-data/{date}/quang-ngai.json"
+    }
+  ]
+}
