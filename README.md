@@ -1,142 +1,261 @@
-# Dò vé số bằng ảnh
+# Check Ticket
 
-Web app React + Node.js cho phép người dùng chụp ảnh tờ vé số, dùng API key Gemini hoặc ChatGPT/OpenAI của chính họ để OCR thông tin vé, sau đó gọi API kết quả xổ số theo tỉnh/thành để dò số.
+Check Ticket is a React and Node.js web app for checking Vietnamese lottery tickets. It lets users enter ticket information manually or scan ticket images with their own Gemini or OpenAI API key, then compares the ticket number with lottery draw results.
 
-## Tính năng
+The project includes a Vite frontend, an Express API server, configurable lottery result providers, account history, statistics, and optional production storage with TiDB/MySQL.
 
-- Chụp/chọn ảnh vé số trên mobile hoặc desktop.
-- Người dùng tự nhập API key Gemini/OpenAI; server không lưu key.
-- Trích xuất `province`, `drawDate`, `ticketNumber`, `series` từ ảnh.
-- Dò kết quả qua adapter API cấu hình được theo tỉnh/thành.
-- Có dữ liệu demo cho Đồng Nai ngày `2026-05-20`.
-- Đăng nhập Google không bắt buộc để lưu thống kê theo email.
-- Lưu lịch sử dò vé, thống kê tháng này và tổng cộng.
-- Dò nhiều vé cùng lúc bằng cách nhập danh sách số vé.
+## Main Features
 
-## Cài đặt
+- Manual ticket checking by province, draw date, ticket number, and optional series.
+- Single-image ticket scanning with Gemini or OpenAI.
+- Batch ticket checking for up to 50 tickets per API request.
+- Batch image scanning, limited to 20 selected images in the UI.
+- Latest draw result panel by Vietnamese lottery region.
+- Guest mode and optional Google Identity sign-in.
+- Ticket history with spending, winning amount, quantity, and source URL.
+- Monthly and lifetime statistics with daily and monthly trends.
+- Local SQLite storage by default.
+- TiDB/MySQL storage for production deployments.
+- Render deployment configuration through `render.yaml`.
+
+## Tech Stack
+
+- Frontend: React 19, React Router, Vite, Tailwind CSS
+- Backend: Express 5 on Node.js 22
+- Local database: SQLite through `better-sqlite3`
+- Production database: TiDB/MySQL through `mysql2`
+- AI OCR providers: Gemini and OpenAI
+- Lottery result provider: Minh Ngoc by default, with support for custom JSON APIs
+
+## Project Structure
+
+```text
+src/
+  App.tsx                         Main React app and route wiring
+  config/constants.ts             Frontend runtime constants and province list
+  services/apiClient.ts           Frontend API client
+  features/check/                 Ticket check, scan, batch, and latest-results UI
+  features/account/               History and statistics UI
+  features/home/                  Home and donation sections
+  components/                     Shared UI components
+  layout/                         Navigation and layout pieces
+
+server/
+  index.ts                        Express API server
+  env.ts                          Loads .env into process.env
+  lottery/checkTicket.ts          Ticket normalization and prize matching
+  lottery/providers/              Lottery provider configuration and parsers
+  scan/                           AI OCR orchestration
+  scan/providers/                 Gemini and OpenAI clients
+  storage/historyStore.ts         SQLite or TiDB/MySQL history storage
+  scripts/                        Demo seed and clear scripts
+
+public/donate/                    Donation QR images
+render.yaml                       Render deployment blueprint
+```
+
+## Requirements
+
+- Node.js 22.x
+- npm
+- Optional: Gemini API key or OpenAI API key for image scanning
+- Optional: Google OAuth Client ID for real Google sign-in
+- Optional: TiDB/MySQL database for production history storage
+
+## Quick Start
+
+Install dependencies:
 
 ```bash
 npm install
+```
+
+Create the local environment file:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+On macOS/Linux:
+
+```bash
+cp .env.example .env
+```
+
+Start both frontend and backend:
+
+```bash
 npm run dev
 ```
 
-Frontend chạy mặc định tại `http://localhost:5173`, backend tại `http://localhost:4000`.
-
-Nếu muốn đổi URL backend cho frontend:
-
-```bash
-VITE_API_BASE=http://localhost:4000 npm run dev:client
-```
-
-## Chạy qua ngrok
-
-App đã cấu hình Vite proxy, nên chỉ cần tunnel frontend:
-
-```bash
-npm run dev
-ngrok http 5173
-```
-
-Mở URL HTTPS của ngrok. Frontend sẽ gọi `/api` cùng host ngrok và Vite tự proxy về backend `localhost:4000`.
-
-Nếu ngrok báo host bị chặn, kiểm tra `vite.config.js` đã có `allowedHosts: true`.
-
-## Đăng nhập, lịch sử và thống kê
-
-App hỗ trợ Google Identity Services nếu bạn cấu hình `VITE_GOOGLE_CLIENT_ID`. Nếu chưa cấu hình, nút đăng nhập sẽ fallback sang nhập email demo để vẫn lưu thống kê theo email. Dữ liệu được lưu bằng SQLite trong file `server/data/check-ticket.sqlite`.
-
-Các thống kê hiện có:
-
-- Tháng này dò được bao nhiêu vé.
-- Tháng này trúng bao nhiêu vé.
-- Tiền đã mua vé trong tháng.
-- Tiền trúng trong tháng.
-- Tổng số vé đã dò.
-- Tổng lãi/lỗ toàn bộ lịch sử.
-
-Để bật Google OAuth thật:
-
-1. Vào Google Cloud Console và tạo OAuth Client ID loại Web.
-2. Thêm Authorized JavaScript origins:
-   - `http://localhost:5173`
-   - URL ngrok nếu dùng tunnel.
-3. Thêm vào `.env`:
-
-```bash
-VITE_GOOGLE_CLIENT_ID=your_google_client_id
-```
-
-4. Chạy lại `npm run dev`.
-
-## Dò nhiều vé nâng cao
-
-Tính năng này hỗ trợ nhiều vé khác tỉnh và khác ngày trong cùng một lần dò.
-
-Bạn có 2 cách nhập:
-
-1. Bấm `+ Thêm vé thủ công`, rồi nhập từng dòng gồm tỉnh/đài, ngày xổ, số vé, seri.
-2. Bấm `Scan nhiều ảnh vé`, chọn nhiều ảnh cùng lúc. AI sẽ đọc từng ảnh và tự thêm vào danh sách vé để bạn kiểm tra/sửa lại trước khi dò.
-
-Backend giới hạn tối đa `50` vé mỗi lần gọi để tránh spam nguồn kết quả. Backend cũng tự gom nhóm theo `province + drawDate`, nên nhiều vé chung tỉnh/ngày chỉ fetch kết quả xổ số 1 lần.
-
-## SQLite database
-
-App dùng SQLite qua package `better-sqlite3`.
-
-File database mặc định:
+Open:
 
 ```text
-server/data/check-ticket.sqlite
+http://localhost:5173
 ```
 
-Schema được tự tạo khi server khởi động, gồm:
+The backend runs on:
 
-- `users`: thông tin user guest/email/Google.
-- `ticket_checks`: lịch sử từng lần dò vé, tiền mua vé, tiền trúng, giải trúng, nguồn kết quả.
+```text
+http://localhost:4000
+```
 
-Nếu muốn đổi vị trí file database, thêm vào `.env`:
+## Local Environment File
+
+The current `.env.example` is:
+
+```env
+PORT=4000
+CLIENT_ORIGIN=http://localhost:5173
+GEMINI_MODEL=gemini-2.5-flash
+OPENAI_MODEL=gpt-4o-mini
+
+VITE_GOOGLE_CLIENT_ID=
+STORAGE_DRIVER=
+TIDB_SSL=
+
+
+DATABASE_URL=
+```
+
+For normal local development, you can keep it exactly like this. With these values:
+
+- The backend starts on port `4000`.
+- The frontend runs on Vite port `5173`.
+- Vite proxies `/api` and `/sample-data` to `http://localhost:4000`.
+- The app uses local SQLite because `STORAGE_DRIVER` and `DATABASE_URL` are empty.
+- Google sign-in falls back to the demo email prompt because `VITE_GOOGLE_CLIENT_ID` is empty.
+- Gemini uses `gemini-2.5-flash`.
+- OpenAI uses `gpt-4o-mini`.
+
+Important: Gemini/OpenAI API keys are not stored in `.env`. Users enter their AI key in the UI when scanning tickets. The backend receives that key only for the scan request.
+
+## Environment Variables
+
+| Variable | Used by | Description |
+| --- | --- | --- |
+| `PORT` | Backend | Express server port. Default: `4000`. |
+| `CLIENT_ORIGIN` | Backend | CORS origin for the frontend. Use `http://localhost:5173` locally. |
+| `VITE_API_BASE` | Frontend | Optional API base URL. Leave empty locally so Vite proxy handles `/api`. |
+| `VITE_GOOGLE_CLIENT_ID` | Frontend | Google Identity Services client ID. Empty value enables demo email login. |
+| `GEMINI_MODEL` | Backend | Gemini model for OCR scan requests. |
+| `OPENAI_MODEL` | Backend | OpenAI model for OCR scan requests. |
+| `SQLITE_PATH` | Backend | Optional custom SQLite database path. |
+| `STORAGE_DRIVER` | Backend | Empty means SQLite. Use `tidb` or `mysql` for TiDB/MySQL. |
+| `DATABASE_URL` | Backend | TiDB/MySQL connection URL. Also enables TiDB/MySQL storage when set. |
+| `TIDB_SSL` / `MYSQL_SSL` | Backend | Set to `true` for SSL database connections. |
+| `TIDB_SSL_REJECT_UNAUTHORIZED` | Backend | Set to `false` only if your DB certificate validation requires it. |
+| `TIDB_HOST`, `TIDB_PORT`, `TIDB_USER`, `TIDB_PASSWORD`, `TIDB_DATABASE` | Backend | Alternative TiDB connection settings if `DATABASE_URL` is not used. |
+| `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE` | Backend | Alternative MySQL connection settings if `DATABASE_URL` is not used. |
+| `TIDB_CONNECTION_LIMIT` | Backend | Database pool connection limit. Default: `5`. |
+| `TIDB_CONNECT_TIMEOUT_MS` | Backend | Database connection timeout. Default: `10000`. |
+| `XOSO_API_KEY` | Backend | Optional key for JSON providers that declare `requiredEnv: "XOSO_API_KEY"`. |
+
+## Available Scripts
 
 ```bash
-SQLITE_PATH=C:/data/check-ticket.sqlite
+npm run dev          # Run backend and frontend together
+npm run dev:client   # Run only Vite frontend
+npm run dev:server   # Run only Express backend with Node watch mode
+npm run build        # Build frontend into dist/
+npm run preview      # Preview the built frontend
+npm run start        # Start the Express server for production
+npm run typecheck    # Run TypeScript without emitting files
+npm run seed:demo    # Add demo ticket history into SQLite
+npm run seed:clear   # Remove demo ticket history from SQLite
 ```
 
-Khi deploy production, hãy backup file SQLite định kỳ và dùng persistent disk/volume để tránh mất dữ liệu.
+## How the App Works
 
-## Cấu hình model AI
+1. A user enters ticket details manually or uploads a ticket image.
+2. If the user scans an image, the frontend sends the image, selected provider, and user-entered API key to `/api/scan-ticket`.
+3. The backend calls Gemini or OpenAI and asks for JSON containing `province`, `drawDate`, `ticketNumber`, and `series`.
+4. The backend normalizes the ticket number to the last 6 digits.
+5. The backend fetches the draw result for the ticket province and date.
+6. The ticket number is matched against prize numbers by suffix.
+7. If history saving is enabled, the result is saved for the current guest/demo/Google user.
 
-Server mặc định dùng:
+## Frontend Routes
+
+- `/` - Home page and donation panel
+- `/check` - Single ticket scan/check, batch ticket check, and latest draw results
+- `/account` - Login, ticket cost settings, history, filters, and statistics
+
+## API Endpoints
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/health` | Health check |
+| `POST` | `/api/scan-ticket` | Scan one ticket image with Gemini or OpenAI |
+| `POST` | `/api/check-ticket` | Check one ticket |
+| `POST` | `/api/check-tickets-batch` | Check up to 50 tickets |
+| `GET` | `/api/stats` | Read stats, trends, and recent history |
+| `POST` | `/api/history/clear` | Clear all history for one user |
+| `POST` | `/api/history/delete` | Delete selected history records |
+| `POST` | `/api/history/quantity` | Update ticket quantity and recalculate amounts |
+| `GET` | `/api/draw-results/today` | Fetch latest results by region |
+| `POST` | `/api/gemini-models` | List Gemini models available for a user key |
+| `POST` | `/api/debug/gemini-ping` | Debug Gemini connectivity |
+
+## Ticket Matching Logic
+
+Ticket normalization happens in `server/lottery/checkTicket.ts`.
+
+- `province` is required.
+- `drawDate` is required and should be `YYYY-MM-DD`.
+- `ticketNumber` is required and is normalized to digits only, then the last 6 digits are used.
+- `series` is optional.
+
+Prize matching uses suffix matching. For example, ticket `123456` matches prize number `56`, `3456`, or `123456`.
+
+## AI Scanning
+
+Scanning is implemented in:
+
+```text
+server/scan/scanTicketImage.ts
+server/scan/providers/gemini.ts
+server/scan/providers/openai.ts
+```
+
+Supported providers:
+
+- `gemini`
+- `openai`
+
+Default models:
 
 - Gemini: `gemini-2.5-flash`
 - OpenAI: `gpt-4o-mini`
 
-Có thể đổi bằng biến môi trường:
+The expected OCR output is JSON:
 
-```bash
-GEMINI_MODEL=gemini-2.5-flash OPENAI_MODEL=gpt-4o-mini npm run dev:server
+```json
+{
+  "province": "Dong Nai",
+  "drawDate": "2026-05-20",
+  "ticketNumber": "123456",
+  "series": "AB"
+}
 ```
 
-Nếu Gemini báo lỗi model không tồn tại, gọi danh sách model bằng API key của bạn:
+If Gemini reports that the configured model is unavailable, use the `/api/gemini-models` endpoint from the app or call Gemini directly:
 
 ```bash
 curl "https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_GEMINI_API_KEY"
 ```
 
-Sau đó chọn model có `supportedGenerationMethods` chứa `generateContent`, ví dụ `gemini-2.5-flash`, `gemini-2.0-flash`, hoặc model mới hơn mà tài khoản của bạn hỗ trợ.
+Then choose a model that supports `generateContent` and update `GEMINI_MODEL`.
 
-## Cấu hình API kết quả xổ số
+## Lottery Result Providers
 
-Mình đã tích hợp sẵn 2 nguồn kết quả:
+Provider configuration is stored in:
 
-### Minh Ngọc
+```text
+server/lottery/providers/lotteryApis.json
+```
 
-- Nguồn: https://www.minhngoc.net.vn/demo/
-- Không cần API key.
-- Đã cấu hình tất cả tỉnh/đài xổ số truyền thống trên Minh Ngọc.
-- Hỗ trợ mọi ngày mà Minh Ngọc còn lưu trang kết quả.
-- Backend tự lấy trang theo dạng:
-  `https://www.minhngoc.net.vn/ket-qua-xo-so/{mien}/{tinh}/DD-MM-YYYY.html`
-
-Ví dụ cấu hình trong `server/lottery/providers/lotteryApis.json`:
+The first configured provider is a wildcard Minh Ngoc provider:
 
 ```json
 {
@@ -145,86 +264,273 @@ Ví dụ cấu hình trong `server/lottery/providers/lotteryApis.json`:
 }
 ```
 
-Lưu ý: đây là cách scrape HTML nên có thể cần cập nhật parser nếu Minh Ngọc đổi giao diện/bảng HTML.
+Because it uses `province: "*"`, it is used for supported provinces unless you change the order or configuration. The Minh Ngoc parser builds URLs like:
 
-Các tỉnh/đài truyền thống đã map:
-
-- Miền Nam: An Giang, Bạc Liêu, Bến Tre, Bình Dương, Bình Phước, Bình Thuận, Cà Mau, Cần Thơ, Đà Lạt, Đồng Nai, Đồng Tháp, Hậu Giang, Kiên Giang, Long An, Sóc Trăng, Tây Ninh, Tiền Giang, TP. HCM, Trà Vinh, Vĩnh Long, Vũng Tàu.
-- Miền Trung: Bình Định, Đà Nẵng, Đắk Lắk, Đắk Nông, Gia Lai, Khánh Hòa, Kon Tum, Ninh Thuận, Phú Yên, Quảng Bình, Quảng Nam, Quảng Ngãi, Quảng Trị, Huế.
-- Miền Bắc: Bắc Ninh, Hà Nội, Hải Phòng, Nam Định, Quảng Ninh, Thái Bình.
-
-Các loại Vietlott/điện toán như Mega 6/45, Power 6/55, Max 4D có cấu trúc trang khác; cần thêm parser riêng nếu muốn dò các loại đó bằng ảnh.
-
-### XoSoAPI
-
-Provider API JSON từ XoSoAPI vẫn được giữ làm lựa chọn dự phòng nếu bạn có API key:
-
-- Docs: https://xosoapi.online/docs
-- Endpoint kết quả xổ số Việt Nam: `GET /api/v1/vietnam/draws`
-- Header xác thực: `X-API-Key: YOUR_API_KEY`
-- Free tier theo docs: 100 requests/ngày, 10 requests/phút.
-
-Tạo `.env` từ `.env.example` rồi điền key:
-
-```bash
-XOSO_API_KEY=your_xosoapi_key
+```text
+https://www.minhngoc.net.vn/ket-qua-xo-so/{region}/{province-slug}/DD-MM-YYYY.html
 ```
 
-Nếu không có `XOSO_API_KEY`, app sẽ tự bỏ qua provider thật và dùng dữ liệu demo local nếu tỉnh/ngày đó đã có sample.
+It then parses the HTML result table into normalized prize data. This does not require an API key, but it depends on Minh Ngoc page structure.
 
-Bạn có thể sửa hoặc thêm provider trong `server/lottery/providers/lotteryApis.json`.
+The config file also contains examples for:
 
-Ví dụ:
+- a JSON API provider using `XOSO_API_KEY`
+- sample-data providers for local JSON result files
+
+Custom JSON provider example:
 
 ```json
 {
-  "apis": [
-    {
-      "province": "Đồng Nai",
-      "aliases": ["Dong Nai"],
-      "url": "https://example.com/api/results?province={province}&date={date}",
-      "dataPath": "data",
-      "prizePath": "prizes"
-    }
-  ]
+  "province": "Dong Nai",
+  "aliases": ["Dong Nai"],
+  "url": "https://example.com/api/results?province={province}&date={date}",
+  "headers": {
+    "X-API-Key": "{env:XOSO_API_KEY}"
+  },
+  "dataPath": "data",
+  "prizePath": "prizes"
 }
 ```
 
-Các placeholder hỗ trợ:
+Supported placeholders:
 
-- `{province}`: tỉnh/đài đã scan.
-- `{date}`: ngày xổ dạng `YYYY-MM-DD`.
-- `{ticketNumber}`: số vé đã scan.
+- `{province}`
+- `{provinceSlug}`
+- `{date}`
+- `{ticketNumber}`
+- `{env:ENV_VAR_NAME}`
 
-Adapter chấp nhận `prizes` dạng mảng:
+Accepted prize array shape:
 
 ```json
 [
-  { "prize": "Giải tám", "numbers": ["56"] },
-  { "prize": "Giải đặc biệt", "number": "123456" }
+  { "prize": "Special prize", "number": "123456" },
+  { "prize": "Eighth prize", "numbers": ["56"] }
 ]
 ```
 
-Hoặc object:
+Accepted prize object shape:
 
 ```json
 {
-  "giai8": ["56"],
-  "dacBiet": ["123456"]
+  "special": ["123456"],
+  "eighth": ["56"]
 }
 ```
 
-## Kiểm thử nhanh dữ liệu demo
+## Storage
 
-1. Chạy `npm run dev`.
-2. Nhập thủ công:
-   - Tỉnh / đài: `Đồng Nai`
-   - Ngày xổ: `2026-05-20`
-   - Số vé: `123456`
-3. Bấm `Dò vé`, kết quả sẽ báo trúng giải đặc biệt và giải tám vì số vé kết thúc bằng `56`.
+### SQLite, Default Local Storage
 
-## Ghi chú bảo mật
+When `STORAGE_DRIVER` and `DATABASE_URL` are empty, the app uses SQLite.
 
-- Không hard-code API key vào source code.
-- Nên thêm rate limit và CAPTCHA nếu deploy public.
-- Nên proxy API kết quả xổ số qua backend để tránh lộ endpoint/private token của nhà cung cấp dữ liệu.
+Default database path:
+
+```text
+server/data/check-ticket.sqlite
+```
+
+The server creates the database and tables automatically. The main tables are:
+
+- `users`
+- `ticket_checks`
+
+Use a custom SQLite path:
+
+```env
+SQLITE_PATH=C:/data/check-ticket.sqlite
+```
+
+### TiDB/MySQL Production Storage
+
+Set `STORAGE_DRIVER` to `tidb` or `mysql`, and provide `DATABASE_URL`:
+
+```env
+STORAGE_DRIVER=tidb
+TIDB_SSL=true
+DATABASE_URL=mysql://user:password@host:4000/database
+```
+
+The app also switches to TiDB/MySQL automatically if `DATABASE_URL`, `TIDB_HOST`, or `MYSQL_HOST` is set.
+
+The server creates the required schema automatically on first use.
+
+## Demo History Data
+
+Seed demo history into the SQLite database:
+
+```bash
+npm run seed:demo
+```
+
+Clear seeded demo history:
+
+```bash
+npm run seed:clear
+```
+
+Demo records use IDs that start with `demo-`.
+
+## Google Sign-In
+
+Google sign-in is optional.
+
+If `VITE_GOOGLE_CLIENT_ID` is empty, the app uses a simple prompt where the user can enter an email. This is useful for local testing because the app can still group history by user ID.
+
+To enable real Google Identity Services:
+
+1. Create a Web OAuth Client ID in Google Cloud Console.
+2. Add the local origin:
+
+```text
+http://localhost:5173
+```
+
+3. Add your deployed origin if you deploy the app.
+4. Set:
+
+```env
+VITE_GOOGLE_CLIENT_ID=your_google_client_id
+```
+
+5. Restart the frontend dev server or rebuild for production.
+
+## Local Development Notes
+
+The Vite config proxies backend requests:
+
+```text
+/api         -> http://localhost:4000
+/sample-data -> http://localhost:4000
+```
+
+That means local development normally does not need `VITE_API_BASE`.
+
+If you run the frontend and backend on separate public URLs, set:
+
+```env
+VITE_API_BASE=https://your-api-host.example.com
+CLIENT_ORIGIN=https://your-frontend-host.example.com
+```
+
+## Using ngrok
+
+Start the app:
+
+```bash
+npm run dev
+```
+
+Tunnel the frontend only:
+
+```bash
+ngrok http 5173
+```
+
+Open the HTTPS ngrok URL. The frontend will still call `/api`, and Vite will proxy it to `localhost:4000`.
+
+## Production Build
+
+Build the frontend:
+
+```bash
+npm run build
+```
+
+Start the server:
+
+```bash
+npm run start
+```
+
+When `dist/` exists, Express serves the built frontend and falls back to `dist/index.html` for client-side routes.
+
+## Deploying to Render
+
+The repository includes `render.yaml`:
+
+```yaml
+buildCommand: npm ci && npm run build
+startCommand: npm start
+healthCheckPath: /api/health
+```
+
+The Render blueprint sets:
+
+```text
+NODE_VERSION=22.15.0
+GEMINI_MODEL=gemini-2.5-flash
+OPENAI_MODEL=gpt-4o-mini
+STORAGE_DRIVER=tidb
+TIDB_SSL=true
+```
+
+You must provide:
+
+```text
+DATABASE_URL
+VITE_GOOGLE_CLIENT_ID
+```
+
+`VITE_GOOGLE_CLIENT_ID` is only required if you want real Google sign-in. `DATABASE_URL` is required for the included Render TiDB/MySQL setup.
+
+## Security Notes
+
+- Do not commit real database credentials.
+- Do not commit AI provider API keys.
+- AI API keys are entered by users in the UI and are not stored by the backend.
+- User-entered AI keys still pass through the backend during scan requests.
+- Add rate limiting before exposing the app publicly.
+- Add abuse protection if public users can trigger AI scans.
+- Use persistent storage in production.
+- Minh Ngoc scraping can break if the source website changes its HTML.
+
+## Troubleshooting
+
+### Frontend cannot connect to backend
+
+Make sure both dev processes are running:
+
+```bash
+npm run dev
+```
+
+Open the Vite URL:
+
+```text
+http://localhost:5173
+```
+
+Do not open `http://localhost:4000` for the frontend during development.
+
+### SQLite is not being used
+
+Check that these values are empty:
+
+```env
+STORAGE_DRIVER=
+DATABASE_URL=
+TIDB_HOST=
+MYSQL_HOST=
+```
+
+If any of them are set, the app may switch to TiDB/MySQL mode.
+
+### Gemini scan fails
+
+- Verify the user-entered Gemini API key.
+- Confirm `GEMINI_MODEL` exists for that key.
+- Try `/api/gemini-models` or the Gemini model list curl command.
+
+### OpenAI scan fails
+
+- Verify the user-entered OpenAI API key.
+- Confirm `OPENAI_MODEL` supports image input and JSON output.
+- Check network/firewall/VPN access from the backend.
+
+### Lottery results fail
+
+- Confirm the province name is supported by the Minh Ngoc route map.
+- Confirm the draw date uses `YYYY-MM-DD`.
+- Check whether Minh Ngoc has a result page for that province and date.
+- If using a JSON provider, confirm `lotteryApis.json`, `dataPath`, `prizePath`, and required environment variables.
