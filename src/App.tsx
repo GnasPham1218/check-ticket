@@ -37,7 +37,14 @@ import {
   getFetchErrorMessage,
   scanTicketImage,
 } from "./services/apiClient";
-import type { AppUser, DrawResult, Prize, Ticket, TicketCheckResult, Stats } from "./types/domain";
+import type {
+  AppUser,
+  DrawResult,
+  Prize,
+  Ticket,
+  TicketCheckResult,
+  Stats,
+} from "./types/domain";
 import { fileToDataUrl } from "./utils/file";
 import { formatCompactVnd, formatDate, formatMoney } from "./utils/format";
 import StatsLineChart from "./features/account/StatsLineChart";
@@ -295,6 +302,14 @@ function LotteryApp() {
 
   async function scanTicket() {
     setError("");
+    if (!apiKey.trim()) {
+      setSingleScanStatus("error");
+      setSingleScanMessage(
+        "Chưa có API key. Vào trang Tài khoản để cấu hình trước khi scan.",
+      );
+      setError("Chưa có API key. Vào trang Tài khoản để cấu hình.");
+      return;
+    }
     setSingleScanStatus("scanning");
     setSingleScanMessage("Đang scan ảnh vé số...");
     try {
@@ -347,7 +362,9 @@ function LotteryApp() {
     if (!files.length) return;
     const currentApiKey = apiKeyRef.current.trim();
     if (!currentApiKey) {
-      setError("Vui lòng nhập API key Gemini/OpenAI trước khi scan nhiều ảnh.");
+      setError(
+        "Vui lòng vào trang Tài khoản để nhập API key trước khi scan nhiều ảnh.",
+      );
       event.target.value = "";
       return;
     }
@@ -520,9 +537,10 @@ function LotteryApp() {
 
   function handleGoogleCredential(response: { credential: string }) {
     try {
-      const payload = response.credential.split(".")[1];
+      const payload = response.credential.split(".")[1] || "";
       const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-      const profile = JSON.parse(decodeURIComponent(escape(atob(normalized))));
+      const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+      const profile = JSON.parse(atob(padded));
       const nextUser = {
         id: profile.email,
         email: profile.email,
@@ -622,6 +640,11 @@ function LotteryApp() {
                 setTicketCost={setTicketCost}
                 ticketQuantity={ticketQuantity}
                 setTicketQuantity={setTicketQuantity}
+                provider={provider}
+                setProvider={setProvider}
+                apiKey={apiKey}
+                setApiKey={setApiKey}
+                apiKeyRef={apiKeyRef}
                 saveHistory={saveHistory}
                 setSaveHistory={setSaveHistory}
                 clearHistory={handleClearHistory}
@@ -660,112 +683,15 @@ function HomePage() {
   );
 }
 
-function LegacyHomePage() {
-  const navigate = useNavigate();
-  return (
-    <section className="grid items-center gap-8 py-10 lg:grid-cols-[1.05fr_0.95fr]">
-      <div>
-        <h1 className="max-w-4xl text-5xl font-black leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl">
-          Trước 4h chiều, chưa biết ai giàu hơn ai...
-        </h1>
-        <p className="mt-6 max-w-2xl text-lg leading-8 text-ink-600 dark:text-ink-300">
-          Chụp hoặc tải ảnh vé số lên, AI tự động đọc đài, ngày và số để dò kết
-          quả tức thì. Cùng xem chiều nay vận may có gọi tên bạn không nhé!
-        </p>
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <button
-            className="rounded-2xl bg-gradient-to-r from-brand-600 to-blue-600 px-6 py-4 font-black text-white shadow-glow"
-            onClick={() => navigate("/check")}
-          >
-            Bắt đầu dò vé
-          </button>
-          <Link
-            className="rounded-2xl border border-ink-200 bg-white px-6 py-4 text-center font-black text-ink-700 dark:border-white/10 dark:bg-white/10 dark:text-white"
-            to="/account"
-          >
-            Xem thống kê
-          </Link>
-        </div>
-        <div className="mt-8 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-3xl border border-white/70 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
-            <p className="text-2xl font-black text-brand-700 dark:text-brand-300">
-              01
-            </p>
-            <p className="mt-1 text-sm font-bold text-ink-600 dark:text-ink-300">
-              Chụp hoặc chọn ảnh vé
-            </p>
-          </div>
-          <div className="rounded-3xl border border-white/70 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
-            <p className="text-2xl font-black text-brand-700 dark:text-brand-300">
-              02
-            </p>
-            <p className="mt-1 text-sm font-bold text-ink-600 dark:text-ink-300">
-              AI đọc tỉnh, ngày, số vé
-            </p>
-          </div>
-          <div className="rounded-3xl border border-white/70 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
-            <p className="text-2xl font-black text-brand-700 dark:text-brand-300">
-              03
-            </p>
-            <p className="mt-1 text-sm font-bold text-ink-600 dark:text-ink-300">
-              Dò kết quả và lưu lịch sử
-            </p>
-          </div>
-        </div>
-      </div>
-      <div className="rounded-4xl border border-white/70 bg-white/85 p-6 shadow-soft backdrop-blur-xl dark:border-white/10 dark:bg-white/5 dark:shadow-soft-dark">
-        <div className="rounded-3xl bg-gradient-to-br from-brand-600 to-blue-600 p-6 text-white shadow-glow">
-          <p className="text-sm font-black uppercase tracking-[0.24em] text-white/70">
-            Trải nghiệm mới
-          </p>
-          <h2 className="mt-3 text-3xl font-black">
-            Dò vé nhanh, lưu lịch sử và xem lời lỗ trong một nơi.
-          </h2>
-        </div>
-        <div className="mt-5 grid gap-3">
-          {[
-            "Tự nhập API key AI, app không lưu key",
-            "Dò một vé hoặc nhiều vé cùng lúc",
-            "Lưu lịch sử bằng TiDB để dùng lại sau",
-            "Tối ưu cho điện thoại khi cần chụp vé",
-          ].map((item) => (
-            <div
-              key={item}
-              className="rounded-2xl bg-ink-50 px-4 py-3 font-bold text-ink-700 dark:bg-white/10 dark:text-ink-200"
-            >
-              {item}
-            </div>
-          ))}
-        </div>
-        <div className="mt-5 rounded-3xl border border-ink-200 bg-white/80 p-5 dark:border-white/10 dark:bg-white/10">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-brand-700 dark:text-brand-300">
-            Buy me a coffee
-          </p>
-          <h3 className="mt-2 text-2xl font-black text-ink-950 dark:text-white">
-            Ủng hộ app duy trì server
-          </h3>
-          <p className="mt-2 text-sm font-bold text-ink-500 dark:text-ink-300">
-            Quét Vietcombank hoặc MoMo nếu app giúp bạn dò vé nhanh hơn.
-          </p>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <DonateQrCard
-              alt="QR Vietcombank"
-              label="Vietcombank"
-              src="/donate/vietcombank-qr.png"
-            />
-            <DonateQrCard
-              alt="QR MoMo"
-              label="MoMo"
-              src="/donate/momo-qr.png"
-            />
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function DonateQrCard({ alt, label, src }: { alt: string; label: string; src: string }) {
+function DonateQrCard({
+  alt,
+  label,
+  src,
+}: {
+  alt: string;
+  label: string;
+  src: string;
+}) {
   const [missing, setMissing] = useState(false);
 
   return (
@@ -835,7 +761,13 @@ function CheckPage(props: any) {
             title="1. Scan ảnh vé số"
             subtitle="API key chỉ dùng cho request hiện tại, không lưu trong server."
           >
-            <AiSettings {...props} />
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
+              Cấu hình API key ở trang{" "}
+              <Link to="/account" className="underline">
+                Tài khoản
+              </Link>{" "}
+              trước khi scan ảnh.
+            </div>
             <div>
               <span className="mb-2 block text-sm font-bold text-ink-700 dark:text-ink-200">
                 Ảnh vé số
@@ -910,8 +842,12 @@ function CheckPage(props: any) {
           title="Dò nhiều vé nâng cao"
           subtitle="Mỗi dòng là một vé riêng, có thể khác tỉnh và khác ngày xổ."
         >
-          <div className="grid gap-4 lg:grid-cols-2">
-            <AiSettings {...props} compact />
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
+            Chưa nhập API key? Vào{" "}
+            <Link to="/account" className="underline">
+              Tài khoản
+            </Link>{" "}
+            để cấu hình và xem hướng dẫn lấy key.
           </div>
           <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
             <button
@@ -941,7 +877,9 @@ function CheckPage(props: any) {
               <p className="text-sm font-black uppercase tracking-wide text-ink-500 dark:text-ink-300">
                 Số vé
               </p>
-              <p className="mt-1 text-3xl font-black">{props.batchTickets.length}</p>
+              <p className="mt-1 text-3xl font-black">
+                {props.batchTickets.length}
+              </p>
             </div>
           </div>
           <div className="space-y-3">
@@ -1251,6 +1189,11 @@ function AccountPage({
   setTicketCost,
   ticketQuantity,
   setTicketQuantity,
+  provider,
+  setProvider,
+  apiKey,
+  setApiKey,
+  apiKeyRef,
   saveHistory,
   setSaveHistory,
   clearHistory,
@@ -1269,13 +1212,19 @@ function AccountPage({
   const totalProfit =
     (stats?.total?.totalWon || 0) - (stats?.total?.totalSpent || 0);
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+
+  useEffect(() => {
+    setAvatarLoadFailed(false);
+  }, [user?.picture]);
 
   useEffect(() => {
     if (user || !GOOGLE_CLIENT_ID || !googleButtonRef.current) return;
 
     let cancelled = false;
     const renderGoogleButton = () => {
-      if (cancelled || !window.google?.accounts?.id || !googleButtonRef.current) return;
+      if (cancelled || !window.google?.accounts?.id || !googleButtonRef.current)
+        return;
       googleButtonRef.current.innerHTML = "";
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
@@ -1297,7 +1246,9 @@ function AccountPage({
     if (window.google?.accounts?.id) {
       renderGoogleButton();
     } else if (existingScript) {
-      existingScript.addEventListener("load", renderGoogleButton, { once: true });
+      existingScript.addEventListener("load", renderGoogleButton, {
+        once: true,
+      });
     } else {
       const script = document.createElement("script");
       script.src = "https://accounts.google.com/gsi/client";
@@ -1321,10 +1272,12 @@ function AccountPage({
           </p>
           <div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-4">
-              {user?.picture ? (
+              {user?.picture && !avatarLoadFailed ? (
                 <img
                   className="h-16 w-16 rounded-3xl border border-white/30 object-cover"
                   src={user.picture}
+                  referrerPolicy="no-referrer"
+                  onError={() => setAvatarLoadFailed(true)}
                   alt={user.email || "Tài khoản"}
                 />
               ) : (
@@ -1354,7 +1307,9 @@ function AccountPage({
                 </button>
               ) : GOOGLE_CLIENT_ID ? (
                 <div className="space-y-2">
-                  <p className="text-sm font-black text-white">Đăng nhập Google</p>
+                  <p className="text-sm font-black text-white">
+                    Đăng nhập Google
+                  </p>
                   <div
                     ref={googleButtonRef}
                     className="min-h-10 min-w-[260px] rounded-2xl bg-white p-1"
@@ -1383,6 +1338,19 @@ function AccountPage({
       {error && <Status tone="error">{error}</Status>}
 
       <Panel
+        title="Cấu hình AI"
+        subtitle="Thiết lập nhà cung cấp, API key, và bấm ? để xem hướng dẫn lấy key."
+      >
+        <AiSettings
+          provider={provider}
+          setProvider={setProvider}
+          apiKey={apiKey}
+          setApiKey={setApiKey}
+          apiKeyRef={apiKeyRef}
+        />
+      </Panel>
+
+      <Panel
         title="Cài đặt dò vé"
         subtitle="Thiết lập chi phí và cách lưu dữ liệu."
       >
@@ -1403,7 +1371,9 @@ function AccountPage({
               value={ticketQuantity}
               inputMode="numeric"
               className={inputClass}
-              onChange={(e) => setTicketQuantity(e.target.value.replace(/\D/g, "").slice(0, 3))}
+              onChange={(e) =>
+                setTicketQuantity(e.target.value.replace(/\D/g, "").slice(0, 3))
+              }
               onBlur={(e) => {
                 const nextValue = Math.max(1, Number(e.target.value) || 1);
                 setTicketQuantity(String(nextValue));

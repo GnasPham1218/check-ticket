@@ -11,11 +11,11 @@ export default function HomeHero() {
   return (
     <div>
       <h1 className="max-w-4xl text-5xl font-black leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl">
-        Trước 4h chiều, chưa biết ai giàu hơn ai...
+        Sau 4h chiều, chưa biết ai giàu hơn ai...
       </h1>
       <p className="mt-6 max-w-2xl text-lg leading-8 text-ink-600 dark:text-ink-300">
-        Chụp hoặc tải ảnh vé số lên, AI tự động đọc đài, ngày và số để dò kết quả tức thì.
-        Cùng xem chiều nay vận may có gọi tên bạn không nhé!
+        Chụp hoặc tải ảnh vé số lên, AI tự động đọc đài, ngày và số để dò kết
+        quả tức thì. Cùng xem chiều nay vận may có gọi tên bạn không nhé!
       </p>
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
         <Link
