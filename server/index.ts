@@ -100,6 +100,17 @@ app.post('/api/check-ticket', asyncHandler(async (request, response) => {
   response.json({ ...result, history });
 }));
 
+app.post('/api/draw-result', asyncHandler(async (request, response) => {
+  const { province = '', drawDate = '' } = request.body || {};
+  const result = await fetchDrawResult({
+    province: String(province || '').trim(),
+    drawDate: String(drawDate || '').trim(),
+    ticketNumber: '000000',
+    series: '',
+  });
+  response.json({ drawResult: result });
+}));
+
 app.post('/api/check-tickets-batch', asyncHandler(async (request, response) => {
   const { user, ticketCost, ticketQuantity, saveHistory, tickets = [] } = request.body || {};
   if (!Array.isArray(tickets) || tickets.length === 0) {

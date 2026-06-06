@@ -32,6 +32,7 @@ import {
   checkSingleTicket,
   checkTicketsBatch,
   clearHistory,
+  fetchDrawResult,
   fetchStats,
   fetchTodayDrawResults,
   getFetchErrorMessage,
@@ -135,6 +136,7 @@ export default function App() {
 
 // --- APP MANAGEMENT HUB ---
 function LotteryApp() {
+  const navigate = useNavigate();
   const [provider, setProvider] = useState("gemini");
   const [apiKey, setApiKey] = useState(
     () => sessionStorage.getItem("aiApiKey") || "",
@@ -350,6 +352,83 @@ function LotteryApp() {
       refreshStats();
     } catch (err) {
       setError(getFetchErrorMessage(err));
+    } finally {
+      setLoading("");
+    }
+  }
+
+  async function openHistoryResult(item: any) {
+    const historyTicket = item?.ticket || {};
+    const nextTicket = {
+      province: String(historyTicket.province || "").trim(),
+      drawDate: String(historyTicket.drawDate || "").trim(),
+      ticketNumber: String(historyTicket.ticketNumber || "").trim(),
+      series: String(historyTicket.series || "").trim(),
+    };
+
+    if (!nextTicket.province || !nextTicket.drawDate || !nextTicket.ticketNumber) {
+      setError("Lịch sử vé này thiếu thông tin nên không thể mở lại kết quả.");
+      return;
+    }
+
+    const matchedPrizes = Array.isArray(item?.matchedPrizes) ? item.matchedPrizes : [];
+    const savedResult = item?.checkResult;
+    const hasStoredDrawTable =
+      Array.isArray(savedResult?.drawResult?.prizes) && savedResult.drawResult.prizes.length > 0;
+    const nextResult: TicketCheckResult = savedResult?.ticket && hasStoredDrawTable
+      ? savedResult
+      : {
+          ticket: nextTicket,
+          isWinner: Boolean(item?.isWinner),
+          matchedPrizes,
+          drawResult: {
+            province: nextTicket.province,
+            drawDate: nextTicket.drawDate,
+            source: item?.source || "",
+            sourceUrl: item?.sourceUrl || "",
+            prizes: matchedPrizes,
+          },
+        };
+
+    setError("");
+    setLoading("");
+    setImagePreview("");
+    setTicket(nextTicket);
+    setResult(nextResult);
+    setActiveTab("single");
+    navigate("/check");
+
+    if (hasStoredDrawTable) return;
+
+    setLoading("Đang tải lại bảng kết quả xổ số...");
+    try {
+      const payload = await fetchDrawResult({
+        province: nextTicket.province,
+        drawDate: nextTicket.drawDate,
+      });
+      setResult((current) =>
+        current
+          ? {
+              ...current,
+              drawResult: payload.drawResult,
+            }
+          : current,
+      );
+    } catch (err) {
+      setResult((current) =>
+        current
+          ? {
+              ...current,
+              drawResult: {
+                ...current.drawResult,
+                prizes: matchedPrizes,
+              },
+            }
+          : current,
+      );
+      setError(
+        `Không tải lại được bảng kết quả cũ. Chỉ hiển thị giải đã lưu. ${getFetchErrorMessage(err)}`,
+      );
     } finally {
       setLoading("");
     }
@@ -659,6 +738,7 @@ function LotteryApp() {
                 setHistoryTo={setHistoryTo}
                 historyLimit={historyLimit}
                 setHistoryLimit={setHistoryLimit}
+                openHistoryResult={openHistoryResult}
               />
             }
           />
@@ -1208,6 +1288,7 @@ function AccountPage({
   setHistoryTo,
   historyLimit,
   setHistoryLimit,
+  openHistoryResult,
 }: any) {
   const totalProfit =
     (stats?.total?.totalWon || 0) - (stats?.total?.totalSpent || 0);
@@ -1464,6 +1545,7 @@ function AccountPage({
           onChangeHistoryFrom={setHistoryFrom}
           onChangeHistoryLimit={setHistoryLimit}
           onChangeHistoryTo={setHistoryTo}
+          onOpenResult={openHistoryResult}
           userId={user?.id || "guest"}
           onChanged={() => window.dispatchEvent(new Event("refresh-stats"))}
         />

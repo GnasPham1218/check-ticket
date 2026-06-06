@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { deleteHistoryItems } from "../../services/apiClient";
+import type { TicketCheckResult } from "../../types/domain";
 import { formatDate, formatMoney } from "../../utils/format";
 
 interface HistoryRecord {
@@ -15,12 +16,16 @@ interface HistoryRecord {
   };
   isWinner: boolean;
   matchedPrizes: Array<{ prize: string; number?: string; numbers?: string[] }>;
+  source?: string;
+  sourceUrl?: string;
+  checkResult?: TicketCheckResult;
 }
 
 interface HistoryListProps {
   items: HistoryRecord[];
   userId: string;
   onChanged: () => void;
+  onOpenResult?: (item: HistoryRecord) => void;
   historyFrom: string;
   historyTo: string;
   historyLimit: string;
@@ -33,6 +38,7 @@ export const HistoryList: React.FC<HistoryListProps> = ({
   items = [],
   userId,
   onChanged,
+  onOpenResult,
   historyFrom,
   historyTo,
   historyLimit,
@@ -210,6 +216,7 @@ export const HistoryList: React.FC<HistoryListProps> = ({
                   item={item}
                   key={item.id}
                   onDelete={() => removeSelected([item.id])}
+                  onOpen={() => onOpenResult?.(item)}
                   onToggle={() => toggle(item.id)}
                 />
               ))}
@@ -245,11 +252,13 @@ function HistoryTransactionItem({
   checked,
   onToggle,
   onDelete,
+  onOpen,
 }: {
   item: HistoryRecord;
   checked: boolean;
   onToggle: () => void;
   onDelete: () => void;
+  onOpen?: () => void;
 }) {
   const checkedAt = item.checkedAt
     ? new Date(item.checkedAt).toLocaleString("vi-VN")
@@ -259,16 +268,29 @@ function HistoryTransactionItem({
 
   return (
     <article
-      className={`group px-1 py-3 transition hover:bg-ink-50/80 dark:hover:bg-white/5 sm:px-3 ${
+      className={`group cursor-pointer px-1 py-3 transition hover:bg-ink-50/80 hover:shadow-sm focus-within:bg-ink-50/80 dark:hover:bg-white/5 dark:focus-within:bg-white/5 sm:px-3 ${
         checked ? "bg-brand-50/70 dark:bg-brand-500/10" : ""
       }`}
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen?.();
+        }
+      }}
+      role="button"
+      tabIndex={0}
     >
       <div className="grid grid-cols-[auto_1fr] gap-3 md:grid-cols-[2rem_1.4fr_1fr_1fr_auto] md:items-center md:gap-4">
         <div className="pt-1 md:pt-0">
           <input
             checked={checked}
             className="h-5 w-5 rounded border-ink-300 text-brand-600 focus:ring-brand-500"
-            onChange={onToggle}
+            onChange={(event) => {
+              event.stopPropagation();
+              onToggle();
+            }}
+            onClick={(event) => event.stopPropagation()}
             type="checkbox"
           />
         </div>
@@ -330,7 +352,10 @@ function HistoryTransactionItem({
 
           <button
             className="rounded-xl px-3 py-2 text-sm font-black text-red-600 transition hover:bg-red-50 dark:text-red-200 dark:hover:bg-red-400/10"
-            onClick={onDelete}
+            onClick={(event) => {
+              event.stopPropagation();
+              onDelete();
+            }}
             type="button"
           >
             Xóa

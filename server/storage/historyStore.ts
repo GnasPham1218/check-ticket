@@ -51,6 +51,7 @@ export async function saveCheckHistory({ user, result, ticketCost = 0, ticketQua
     source: result.drawResult?.source || '',
     sourceUrl: result.drawResult?.sourceUrl || '',
     rawTicketJson: JSON.stringify(result.ticket),
+    checkResultJson: JSON.stringify(result),
   };
 
   if (useTidb) {
@@ -218,6 +219,7 @@ function ensureSqliteSchema(db: any) {
       source TEXT,
       source_url TEXT,
       raw_ticket_json TEXT NOT NULL,
+      check_result_json TEXT,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
@@ -230,6 +232,9 @@ function ensureSqliteSchema(db: any) {
   const columns = db.prepare('PRAGMA table_info(ticket_checks)').all().map((column) => column.name);
   if (!columns.includes('ticket_quantity')) {
     db.exec('ALTER TABLE ticket_checks ADD COLUMN ticket_quantity INTEGER NOT NULL DEFAULT 1');
+  }
+  if (!columns.includes('check_result_json')) {
+    db.exec('ALTER TABLE ticket_checks ADD COLUMN check_result_json TEXT');
   }
 }
 
@@ -248,12 +253,12 @@ function createSqliteStatements(db: any) {
       INSERT INTO ticket_checks (
         id, user_id, checked_at, province, draw_date, ticket_number, series, ticket_quantity,
         ticket_cost, winning_amount, is_winner, matched_prizes_json, source,
-        source_url, raw_ticket_json
+        source_url, raw_ticket_json, check_result_json
       )
       VALUES (
         @id, @userId, @checkedAt, @province, @drawDate, @ticketNumber, @series, @ticketQuantity,
         @ticketCost, @winningAmount, @isWinner, @matchedPrizesJson, @source,
-        @sourceUrl, @rawTicketJson
+        @sourceUrl, @rawTicketJson, @checkResultJson
       )
     `),
   };
@@ -338,11 +343,13 @@ async function ensureTidbSchema() {
           source VARCHAR(255),
           source_url TEXT,
           raw_ticket_json JSON NOT NULL,
+          check_result_json JSON,
           INDEX idx_ticket_checks_user_checked_at (user_id, checked_at),
           INDEX idx_ticket_checks_user_draw (user_id, province, draw_date)
         )
       `);
       await ensureTidbColumn(pool, 'ticket_checks', 'ticket_quantity', 'INT NOT NULL DEFAULT 1');
+      await ensureTidbColumn(pool, 'ticket_checks', 'check_result_json', 'JSON');
     })();
   }
   return tidbSchemaPromise;
@@ -389,9 +396,9 @@ async function saveCheckHistoryTidb({ normalizedUser, checkedAt, record }) {
         INSERT INTO ticket_checks (
           id, user_id, checked_at, province, draw_date, ticket_number, series, ticket_quantity,
           ticket_cost, winning_amount, is_winner, matched_prizes_json, source,
-          source_url, raw_ticket_json
+          source_url, raw_ticket_json, check_result_json
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS JSON), ?, ?, CAST(? AS JSON))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS JSON), ?, ?, CAST(? AS JSON), CAST(? AS JSON))
       `,
       [
         record.id,
@@ -409,6 +416,7 @@ async function saveCheckHistoryTidb({ normalizedUser, checkedAt, record }) {
         record.source,
         record.sourceUrl,
         record.rawTicketJson,
+        record.checkResultJson,
       ],
     );
     await connection.commit();
@@ -694,6 +702,12 @@ function addIsoDays(date, amount) {
 }
 
 function mapHistoryRecord(record) {
+  const ticket = parseJson(record.raw_ticket_json ?? record.rawTicketJson, {});
+  const matchedPrizes = parseJson(record.matched_prizes_json ?? record.matchedPrizesJson, []);
+  const source = record.source || '';
+  const sourceUrl = record.source_url || record.sourceUrl || '';
+  const checkResult = parseJson(record.check_result_json ?? record.checkResultJson, null);
+
   return {
     id: record.id,
     userId: record.user_id || record.userId,
@@ -707,11 +721,12 @@ function mapHistoryRecord(record) {
     ticketQuantity: Number(record.ticket_quantity ?? record.ticketQuantity ?? 1),
     ticketCost: Number(record.ticket_cost ?? record.ticketCost ?? 0),
     winningAmount: Number(record.winning_amount ?? record.winningAmount ?? 0),
-    ticket: parseJson(record.raw_ticket_json ?? record.rawTicketJson, {}),
+    ticket,
     isWinner: Boolean(record.is_winner ?? record.isWinner),
-    matchedPrizes: parseJson(record.matched_prizes_json ?? record.matchedPrizesJson, []),
-    source: record.source || '',
-    sourceUrl: record.source_url || record.sourceUrl || '',
+    matchedPrizes,
+    source,
+    sourceUrl,
+    checkResult,
   };
 }
 

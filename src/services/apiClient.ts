@@ -40,6 +40,10 @@ export async function checkSingleTicket(input: CheckTicketInput): Promise<Ticket
   return postJson('/api/check-ticket', input);
 }
 
+export async function fetchDrawResult(input: Pick<Ticket, 'province' | 'drawDate'>): Promise<{ drawResult: DrawResult }> {
+  return postJson('/api/draw-result', input);
+}
+
 export async function checkTicketsBatch(input: CheckTicketsBatchInput): Promise<{ results: TicketCheckResult[] }> {
   return postJson('/api/check-tickets-batch', input);
 }
