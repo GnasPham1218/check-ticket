@@ -350,6 +350,10 @@ function HistoryTransactionItem({
             {item.isWinner ? "Trúng thưởng" : "Không trúng"}
           </span>
 
+          <span className="hidden rounded-full bg-ink-100 px-3 py-1 text-xs font-black text-ink-600 transition group-hover:bg-brand-100 group-hover:text-brand-700 dark:bg-white/10 dark:text-ink-200 dark:group-hover:bg-brand-400/15 dark:group-hover:text-brand-200 md:inline-flex">
+            Xem lại
+          </span>
+
           <button
             className="rounded-xl px-3 py-2 text-sm font-black text-red-600 transition hover:bg-red-50 dark:text-red-200 dark:hover:bg-red-400/10"
             onClick={(event) => {

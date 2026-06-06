@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import type { TicketCheckResult } from "../../types/domain";
 import { formatDate } from "../../utils/format";
 
@@ -7,9 +7,14 @@ interface BatchResultItem extends Partial<TicketCheckResult> {
   error?: string;
 }
 
-export const BatchResults: React.FC<{ results: BatchResultItem[] }> = ({
+export const BatchResults: React.FC<{
+  results: BatchResultItem[];
+  renderResultDetails?: (result: TicketCheckResult) => React.ReactNode;
+}> = ({
   results,
+  renderResultDetails,
 }) => {
+  const [expandedKey, setExpandedKey] = useState("");
   const winners = results.filter((result) => result.ok !== false && result.isWinner).length;
   const failed = results.filter((result) => result.ok === false).length;
 
@@ -45,11 +50,22 @@ export const BatchResults: React.FC<{ results: BatchResultItem[] }> = ({
           const ticket = result.ticket;
           const matched = result.matchedPrizes || [];
           const hasError = result.ok === false;
+          const resultKey = `${ticket?.ticketNumber || "ticket"}-${index}`;
+          const expanded = expandedKey === resultKey;
 
           return (
             <article
-              key={`${ticket?.ticketNumber || "ticket"}-${index}`}
-              className="rounded-2xl border border-ink-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5"
+              key={resultKey}
+              className="cursor-pointer rounded-2xl border border-ink-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-soft dark:border-white/10 dark:bg-white/5 dark:hover:border-brand-400/40"
+              onClick={() => setExpandedKey(expanded ? "" : resultKey)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setExpandedKey(expanded ? "" : resultKey);
+                }
+              }}
+              role="button"
+              tabIndex={0}
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -74,6 +90,11 @@ export const BatchResults: React.FC<{ results: BatchResultItem[] }> = ({
                     {ticket?.series ? ` - seri ${ticket.series}` : ""}
                   </p>
                 </div>
+                {!hasError ? (
+                  <span className="rounded-full bg-ink-100 px-3 py-1 text-xs font-black text-ink-600 dark:bg-white/10 dark:text-ink-200">
+                    {expanded ? "Thu gọn" : "Xem bảng"}
+                  </span>
+                ) : null}
               </div>
 
               {hasError ? (
@@ -101,6 +122,11 @@ export const BatchResults: React.FC<{ results: BatchResultItem[] }> = ({
                   Vé này chưa khớp giải nào trong dữ liệu hiện có.
                 </p>
               )}
+              {expanded && !hasError && renderResultDetails ? (
+                <div className="mt-4" onClick={(event) => event.stopPropagation()}>
+                  {renderResultDetails(result as TicketCheckResult)}
+                </div>
+              ) : null}
             </article>
           );
         })}

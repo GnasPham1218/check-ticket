@@ -6,7 +6,6 @@ import {
   Navigate,
   Route,
   Routes,
-  useNavigate,
 } from "react-router-dom";
 
 // --- IMPORT INTERNAL COMPONENTS ---
@@ -99,6 +98,16 @@ function guestUser(): AppUser {
   return { id: "guest", name: "Khách", email: "" };
 }
 
+function formatPrizeSummary(result: TicketCheckResult | null) {
+  if (!result?.matchedPrizes?.length) return "Chưa trúng theo dữ liệu hiện có";
+  return result.matchedPrizes
+    .map(
+      (item) =>
+        `${item.prize}: ${(item.numbers || [item.number]).filter(Boolean).join(", ")}`,
+    )
+    .join(" • ");
+}
+
 function getMissingTicketFields(row: Partial<Ticket>) {
   const missing = [];
   if (!String(row.province || "").trim()) missing.push("tỉnh / đài");
@@ -136,7 +145,6 @@ export default function App() {
 
 // --- APP MANAGEMENT HUB ---
 function LotteryApp() {
-  const navigate = useNavigate();
   const [provider, setProvider] = useState("gemini");
   const [apiKey, setApiKey] = useState(
     () => sessionStorage.getItem("aiApiKey") || "",
@@ -162,6 +170,9 @@ function LotteryApp() {
   );
   const [saveHistory, setSaveHistory] = useState(true);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [historyReplayResult, setHistoryReplayResult] = useState<TicketCheckResult | null>(null);
+  const [historyReplayLoading, setHistoryReplayLoading] = useState("");
+  const [historyReplayError, setHistoryReplayError] = useState("");
   const [selectedStatsMonth, setSelectedStatsMonth] = useState(() =>
     new Date().toISOString().slice(0, 7),
   );
@@ -194,14 +205,7 @@ function LotteryApp() {
   );
 
   const prizeSummary = useMemo(() => {
-    if (!result?.matchedPrizes?.length)
-      return "Chưa trúng theo dữ liệu hiện có";
-    return result.matchedPrizes
-      .map(
-        (item) =>
-          `${item.prize}: ${(item.numbers || [item.number]).filter(Boolean).join(", ")}`,
-      )
-      .join(" • ");
+    return formatPrizeSummary(result);
   }, [result]);
 
   useEffect(() => {
@@ -367,7 +371,7 @@ function LotteryApp() {
     };
 
     if (!nextTicket.province || !nextTicket.drawDate || !nextTicket.ticketNumber) {
-      setError("Lịch sử vé này thiếu thông tin nên không thể mở lại kết quả.");
+      setHistoryReplayError("Lịch sử vé này thiếu thông tin nên không thể mở lại kết quả.");
       return;
     }
 
@@ -390,23 +394,19 @@ function LotteryApp() {
           },
         };
 
-    setError("");
-    setLoading("");
-    setImagePreview("");
-    setTicket(nextTicket);
-    setResult(nextResult);
-    setActiveTab("single");
-    navigate("/check");
+    setHistoryReplayError("");
+    setHistoryReplayLoading("");
+    setHistoryReplayResult(nextResult);
 
     if (hasStoredDrawTable) return;
 
-    setLoading("Đang tải lại bảng kết quả xổ số...");
+    setHistoryReplayLoading("Đang tải lại bảng kết quả xổ số...");
     try {
       const payload = await fetchDrawResult({
         province: nextTicket.province,
         drawDate: nextTicket.drawDate,
       });
-      setResult((current) =>
+      setHistoryReplayResult((current) =>
         current
           ? {
               ...current,
@@ -415,7 +415,7 @@ function LotteryApp() {
           : current,
       );
     } catch (err) {
-      setResult((current) =>
+      setHistoryReplayResult((current) =>
         current
           ? {
               ...current,
@@ -426,11 +426,11 @@ function LotteryApp() {
             }
           : current,
       );
-      setError(
+      setHistoryReplayError(
         `Không tải lại được bảng kết quả cũ. Chỉ hiển thị giải đã lưu. ${getFetchErrorMessage(err)}`,
       );
     } finally {
-      setLoading("");
+      setHistoryReplayLoading("");
     }
   }
 
@@ -739,6 +739,9 @@ function LotteryApp() {
                 historyLimit={historyLimit}
                 setHistoryLimit={setHistoryLimit}
                 openHistoryResult={openHistoryResult}
+                historyReplayResult={historyReplayResult}
+                historyReplayLoading={historyReplayLoading}
+                historyReplayError={historyReplayError}
               />
             }
           />
@@ -980,7 +983,16 @@ function CheckPage(props: any) {
             Dò {props.batchTickets.length} vé
           </Button>
           {props.batchResults.length > 0 && (
-            <BatchResults results={props.batchResults} />
+            <BatchResults
+              results={props.batchResults}
+              renderResultDetails={(result) => (
+                <ResultSection
+                  imagePreview=""
+                  prizeSummary={formatPrizeSummary(result)}
+                  result={result}
+                />
+              )}
+            />
           )}
         </Panel>
       )}
@@ -1289,6 +1301,9 @@ function AccountPage({
   historyLimit,
   setHistoryLimit,
   openHistoryResult,
+  historyReplayResult,
+  historyReplayLoading,
+  historyReplayError,
 }: any) {
   const totalProfit =
     (stats?.total?.totalWon || 0) - (stats?.total?.totalSpent || 0);
@@ -1549,6 +1564,25 @@ function AccountPage({
           userId={user?.id || "guest"}
           onChanged={() => window.dispatchEvent(new Event("refresh-stats"))}
         />
+        {historyReplayLoading ? (
+          <div className="mt-4">
+            <Status tone="info">{historyReplayLoading}</Status>
+          </div>
+        ) : null}
+        {historyReplayError ? (
+          <div className="mt-4">
+            <Status tone="error">{historyReplayError}</Status>
+          </div>
+        ) : null}
+        {historyReplayResult ? (
+          <div className="mt-5">
+            <ResultSection
+              imagePreview=""
+              prizeSummary={formatPrizeSummary(historyReplayResult)}
+              result={historyReplayResult}
+            />
+          </div>
+        ) : null}
       </Panel>
     </div>
   );
