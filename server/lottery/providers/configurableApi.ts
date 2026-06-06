@@ -16,6 +16,15 @@ export async function fetchDrawResult(ticket) {
     );
   }
 
+  const result = await fetchDrawResultWithConfig(apiConfig, ticket);
+  if (hasUsablePrizes(result) || apiConfig.province === '*') return result;
+
+  const fallbackConfig = findWildcardApiConfig(config);
+  if (!fallbackConfig || fallbackConfig === apiConfig) return result;
+  return fetchDrawResultWithConfig(fallbackConfig, ticket);
+}
+
+async function fetchDrawResultWithConfig(apiConfig, ticket) {
   if (apiConfig.provider === 'minhngoc') {
     return fetchMinhNgocResult(ticket);
   }
@@ -46,12 +55,25 @@ async function readConfig() {
 
 function findApiConfig(config, province) {
   const normalizedProvince = normalizeName(province);
-  return config.apis.find((api) => {
-    if (api.requiredEnv && !process.env[api.requiredEnv]) return false;
-    if (api.province === '*') return true;
+  const availableApis = config.apis.filter((api) => !api.requiredEnv || process.env[api.requiredEnv]);
+  const exactMatch = availableApis.find((api) => {
+    if (api.province === '*') return false;
     const names = [api.province, ...(api.aliases || [])].map(normalizeName);
     return names.includes(normalizedProvince);
   });
+
+  return exactMatch || availableApis.find((api) => api.province === '*');
+}
+
+function findWildcardApiConfig(config) {
+  return config.apis.find((api) => {
+    if (api.requiredEnv && !process.env[api.requiredEnv]) return false;
+    return api.province === '*';
+  });
+}
+
+function hasUsablePrizes(result) {
+  return Array.isArray(result?.prizes) && result.prizes.length > 0;
 }
 
 function buildUrl(template, ticket) {
