@@ -20,6 +20,10 @@ const port = process.env.PORT || 4000;
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || true }));
 app.use(express.json({ limit: '12mb' }));
 app.use('/sample-data', express.static(path.join(dirname, 'sample-data')));
+app.use('/api', (_request, response, next) => {
+  response.setHeader('Content-Type', 'application/json; charset=utf-8');
+  next();
+});
 
 app.get('/api/health', (_request, response) => {
   response.json({ ok: true });

@@ -98,6 +98,14 @@ function guestUser(): AppUser {
   return { id: "guest", name: "Khách", email: "" };
 }
 
+function parseJwtPayload<T = any>(credential: string): T {
+  const payload = credential.split(".")[1] || "";
+  const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+  const bytes = Uint8Array.from(atob(padded), (char) => char.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
 function formatPrizeSummary(result: TicketCheckResult | null) {
   if (!result?.matchedPrizes?.length) return "Chưa trúng theo dữ liệu hiện có";
   return result.matchedPrizes
@@ -628,10 +636,7 @@ function LotteryApp() {
 
   function handleGoogleCredential(response: { credential: string }) {
     try {
-      const payload = response.credential.split(".")[1] || "";
-      const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-      const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
-      const profile = JSON.parse(atob(padded));
+      const profile = parseJwtPayload(response.credential);
       const nextUser = {
         id: profile.email,
         email: profile.email,

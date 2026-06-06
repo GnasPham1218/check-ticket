@@ -296,6 +296,7 @@ function getTidbConfig() {
     waitForConnections: true,
     connectionLimit: Number(process.env.TIDB_CONNECTION_LIMIT || 5),
     connectTimeout: Number(process.env.TIDB_CONNECT_TIMEOUT_MS || 10000),
+    charset: 'utf8mb4',
     namedPlaceholders: false,
     ssl: sslEnabled ? { minVersion: 'TLSv1.2', rejectUnauthorized } : undefined,
   };
@@ -324,7 +325,7 @@ async function ensureTidbSchema() {
           picture TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at VARCHAR(32) NOT NULL
-        )
+        ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
       await pool.execute(`
         CREATE TABLE IF NOT EXISTS ticket_checks (
@@ -346,7 +347,7 @@ async function ensureTidbSchema() {
           check_result_json JSON,
           INDEX idx_ticket_checks_user_checked_at (user_id, checked_at),
           INDEX idx_ticket_checks_user_draw (user_id, province, draw_date)
-        )
+        ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
       await ensureTidbColumn(pool, 'ticket_checks', 'ticket_quantity', 'INT NOT NULL DEFAULT 1');
       await ensureTidbColumn(pool, 'ticket_checks', 'check_result_json', 'JSON');
