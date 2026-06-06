@@ -171,6 +171,7 @@ function LotteryApp() {
   const [saveHistory, setSaveHistory] = useState(true);
   const [stats, setStats] = useState<Stats | null>(null);
   const [historyReplayResult, setHistoryReplayResult] = useState<TicketCheckResult | null>(null);
+  const [historyReplayOpen, setHistoryReplayOpen] = useState(false);
   const [historyReplayLoading, setHistoryReplayLoading] = useState("");
   const [historyReplayError, setHistoryReplayError] = useState("");
   const [selectedStatsMonth, setSelectedStatsMonth] = useState(() =>
@@ -363,6 +364,10 @@ function LotteryApp() {
 
   async function openHistoryResult(item: any) {
     const historyTicket = item?.ticket || {};
+    setHistoryReplayOpen(true);
+    setHistoryReplayResult(null);
+    setHistoryReplayError("");
+    setHistoryReplayLoading("");
     const nextTicket = {
       province: String(historyTicket.province || "").trim(),
       drawDate: String(historyTicket.drawDate || "").trim(),
@@ -432,6 +437,13 @@ function LotteryApp() {
     } finally {
       setHistoryReplayLoading("");
     }
+  }
+
+  function closeHistoryReplay() {
+    setHistoryReplayOpen(false);
+    setHistoryReplayResult(null);
+    setHistoryReplayLoading("");
+    setHistoryReplayError("");
   }
 
   async function handleBatchImagesChange(
@@ -739,9 +751,11 @@ function LotteryApp() {
                 historyLimit={historyLimit}
                 setHistoryLimit={setHistoryLimit}
                 openHistoryResult={openHistoryResult}
+                historyReplayOpen={historyReplayOpen}
                 historyReplayResult={historyReplayResult}
                 historyReplayLoading={historyReplayLoading}
                 historyReplayError={historyReplayError}
+                closeHistoryReplay={closeHistoryReplay}
               />
             }
           />
@@ -1032,10 +1046,12 @@ function ResultSection({
   result,
   imagePreview,
   prizeSummary,
+  hideTicketPreview = false,
 }: {
   result: TicketCheckResult;
   imagePreview: string;
   prizeSummary: string;
+  hideTicketPreview?: boolean;
 }) {
   const matchedCount = result.matchedPrizes?.length || 0;
 
@@ -1073,8 +1089,10 @@ function ResultSection({
         {prizeSummary}
       </p>
 
-      <div className="mt-6 grid gap-5 xl:grid-cols-[0.9fr_1.35fr]">
-        <TicketPreview imagePreview={imagePreview} ticket={result.ticket} />
+      <div className={`mt-6 grid gap-5 ${hideTicketPreview ? "" : "xl:grid-cols-[0.9fr_1.35fr]"}`}>
+        {hideTicketPreview ? null : (
+          <TicketPreview imagePreview={imagePreview} ticket={result.ticket} />
+        )}
         <LotteryResultTable result={result} />
       </div>
     </section>
@@ -1301,9 +1319,11 @@ function AccountPage({
   historyLimit,
   setHistoryLimit,
   openHistoryResult,
+  historyReplayOpen,
   historyReplayResult,
   historyReplayLoading,
   historyReplayError,
+  closeHistoryReplay,
 }: any) {
   const totalProfit =
     (stats?.total?.totalWon || 0) - (stats?.total?.totalSpent || 0);
@@ -1564,26 +1584,124 @@ function AccountPage({
           userId={user?.id || "guest"}
           onChanged={() => window.dispatchEvent(new Event("refresh-stats"))}
         />
-        {historyReplayLoading ? (
-          <div className="mt-4">
-            <Status tone="info">{historyReplayLoading}</Status>
-          </div>
-        ) : null}
-        {historyReplayError ? (
-          <div className="mt-4">
-            <Status tone="error">{historyReplayError}</Status>
-          </div>
-        ) : null}
-        {historyReplayResult ? (
-          <div className="mt-5">
-            <ResultSection
-              imagePreview=""
-              prizeSummary={formatPrizeSummary(historyReplayResult)}
-              result={historyReplayResult}
-            />
-          </div>
-        ) : null}
       </Panel>
+      {historyReplayOpen ? (
+        <HistoryReplayModal
+          error={historyReplayError}
+          loading={historyReplayLoading}
+          onClose={closeHistoryReplay}
+          result={historyReplayResult}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function HistoryReplayModal({
+  error,
+  loading,
+  onClose,
+  result,
+}: {
+  error: string;
+  loading: string;
+  onClose: () => void;
+  result: TicketCheckResult | null;
+}) {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  const ticket = result?.ticket;
+
+  return (
+    <div
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/60 p-4 backdrop-blur-sm"
+      onMouseDown={onClose}
+      role="dialog"
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl dark:bg-ink-950 sm:p-6"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-black text-ink-900 dark:text-white">
+              Kết quả dò vé
+            </h2>
+            {ticket ? (
+              <p className="mt-1 text-sm font-bold text-ink-500 dark:text-ink-300">
+                {ticket.province} · {formatDate(ticket.drawDate)}
+              </p>
+            ) : null}
+          </div>
+          <Button
+            className="shrink-0"
+            onClick={onClose}
+            type="button"
+            variant="secondary"
+          >
+            Đóng
+          </Button>
+        </div>
+
+        {ticket ? (
+          <div className="mb-5 grid gap-3 rounded-3xl bg-ink-50 p-4 text-sm font-bold text-ink-700 dark:bg-white/5 dark:text-ink-100 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <span className="block text-xs uppercase text-ink-400">Số vé</span>
+              {ticket.ticketNumber}
+            </div>
+            <div>
+              <span className="block text-xs uppercase text-ink-400">Tỉnh</span>
+              {ticket.province}
+            </div>
+            <div>
+              <span className="block text-xs uppercase text-ink-400">Ngày quay</span>
+              {formatDate(ticket.drawDate)}
+            </div>
+            <div>
+              <span className="block text-xs uppercase text-ink-400">Series</span>
+              {ticket.series || "Không có"}
+            </div>
+            <div className="sm:col-span-2 lg:col-span-4">
+              <span
+                className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${
+                  result?.isWinner
+                    ? "bg-green-100 text-green-700 dark:bg-green-400/15 dark:text-green-200"
+                    : "bg-ink-200 text-ink-700 dark:bg-white/10 dark:text-ink-200"
+                }`}
+              >
+                {result?.isWinner ? "Trúng thưởng" : "Không trúng"}
+              </span>
+            </div>
+          </div>
+        ) : null}
+
+        {loading ? (
+          <div className="mb-4">
+            <Status tone="info">{loading}</Status>
+          </div>
+        ) : null}
+        {error ? (
+          <div className="mb-4">
+            <Status tone="error">{error}</Status>
+          </div>
+        ) : null}
+        {result ? (
+          <ResultSection
+            hideTicketPreview
+            imagePreview=""
+            prizeSummary={formatPrizeSummary(result)}
+            result={result}
+          />
+        ) : null}
+      </div>
     </div>
   );
 }
