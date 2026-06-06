@@ -3,3 +3,5 @@ dist/
 .env
 server/data/*.sqlite
 server/data/*.sqlite-*
+
+.codegraph/
